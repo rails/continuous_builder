@@ -106,11 +106,7 @@ module ContinuousBuilder
     
     def broken(build, options, sent_at = Time.now)
       @subject = "[#{options[:application_name]}] Build still broken (##{build.checkout.current_revision})"
-      @body    = [ 
-        "#{build.checkout.last_author} did not manage to fix the build with this checkin", 
-        build.checkout.last_commit_message, 
-        build.output
-      ].join("\n\n")
+      @body    = [ build.checkout.last_commit_message, build.output ].join("\n\n")
 
       @recipients, @from, @sent_on = options[:recipients], options[:sender], sent_at
     end
