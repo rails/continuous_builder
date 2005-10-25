@@ -33,7 +33,7 @@ module ContinuousBuilder
  
     private
       def make
-        @output = `cd #{@options[:application_root]} && #{@options[:env_command]} rake #{@options[:task_name]} RAILS_ENV=test`
+        @output = `cd #{@options[:application_root]} && #{@options[:bin_path]}rake #{@options[:task_name]} RAILS_ENV=test`
         make_successful?
       end
       
@@ -77,7 +77,7 @@ module ContinuousBuilder
       end
       
       def execute(command, parameters = nil)
-        `#{@options[:env_command]} #{command} #{@options[:application_root]} #{parameters}`
+        `#{@options[:env_command]}#{command} #{@options[:application_root]} #{parameters}`
       end
   end
 

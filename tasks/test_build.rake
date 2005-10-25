@@ -3,8 +3,8 @@ task :test_latest_revision => :environment do
   require(File.dirname(__FILE__) + "/../lib/continuous_builder")
 
   build = ContinuousBuilder::Build.new(
-    :task_name        => ENV['RAKE_TASK']   || '',
-    :env_command      => ENV['ENV_COMMAND'] || "/usr/bin/env",
+    :task_name        => ENV['RAKE_TASK'] || '',
+    :env_command      => ENV['BIN_PATH']  || "/usr/local/bin/",
     :application_root => RAILS_ROOT
   )
 
