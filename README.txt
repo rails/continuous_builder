@@ -1,7 +1,7 @@
-Continuos Builder
+Continuous Builder
 =================
 
-Continous integration made trivial.
+Continuous integration made trivial.
 
 Subversion post-commit hook:
 

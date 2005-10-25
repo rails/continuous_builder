@@ -1,4 +1,4 @@
-module ContinousBuilder
+module ContinuousBuilder
   class Build
     attr_reader :status, :output, :success, :task_name
  
