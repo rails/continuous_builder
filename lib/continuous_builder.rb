@@ -1,21 +1,61 @@
 module ContinuousBuilder
   class Build
-    attr_reader :status, :output, :success, :options
- 
-    def self.run
-      Build.new.run
-    end
- 
+    attr_reader :output, :success, :checkout, :status
+
     def initialize(options = {})
-      @options = options
+      @options  = options
+
+      @status = Status.new(@options[:application_root] + "/log/last_build.log")
+
+      @checkout = Checkout.new(options)
+      @checkout.update!
     end
  
     def run
-      update if @status.nil?    
-      make if @success.nil?
+      previous_status = @status.recall
+      
+      run_status = if checkout.has_changes?
+        if status = make
+          @status.keep(:succesful)
+          previous_status == :failed ? :revived : :succesful
+        else
+          @status.keep(:failed)
+          previous_status == :failed ? :broken : :failed
+        end
+      else
+        :unchanged
+      end
+      
+      $stderr << "run: #{run_status.inspect}"
+      
+      run_status
     end
  
-    def revision
+    private
+      def make
+        @output = `cd #{@options[:application_root]} && RAILS_ENV=test #{@options[:env_command]} rake #{@options[:task_name]}`
+        make_successful?
+      end
+      
+      def make_successful?
+        $?.exitstatus == 0
+      end
+  end
+  
+  class Checkout
+    def initialize(path, options = {})
+      @path, @options = path, options
+    end
+
+    def update!
+      @status = execute("svn update")
+    end
+
+    def has_changes?
+      @status =~ /[A-Z]\s+[\w\/]+/
+    end
+
+    def current_revision
       info['Revision'].to_i
     end
  
@@ -23,43 +63,63 @@ module ContinuousBuilder
       info['URL']
     end
  
-    def commit_message
-      `#{options[:env_command]} svn log #{RAILS_ROOT} -rHEAD -v`
+    def last_commit_message
+      execute("svn log", " -rHEAD -v")
     end
  
-    def author
+    def last_author
       info['Last Changed Author']
     end
- 
-    def tests_ok?
-      run if @success.nil?
-      @success == true
-    end
- 
-    def has_changes?
-      update if @status.nil?
-      @status =~ /[A-Z]\s+[\w\/]+/
-    end
- 
+
     private
-      def update
-        @status = `#{options[:env_command]} svn update #{RAILS_ROOT}`
-      end
- 
       def info
-        @info ||= YAML.load(`#{options[:env_command]} svn info #{RAILS_ROOT}`)
+        @info ||= YAML.load(execute("svn info"))
       end
- 
-      def make
-        @output, @success = `cd #{RAILS_ROOT} && RAILS_ENV=test #{options[:env_command]} rake #{options[:task_name]}`, ($?.exitstatus == 0)
+      
+      def execute(command, parameters = nil)
+        `#{@options[:env_command]} #{command} #{@options[:application_root]} #{parameters}`
       end
   end
 
+  class Status
+    def initialize(path)
+      @path = path
+    end
+    
+    def keep(status)
+      File.open(@path, "w+", 0777) { |file| file.write(status.to_s) }
+    end
+    
+    def recall
+      value = File.exists?(@path) ? File.read(@path) : false
+      value.blank? ? false : value.to_sym
+    end
+  end
+
   class Notifier < ActionMailer::Base
-    def failure(build, application, email_to, email_from, sent_at = Time.now)
-      @subject = "[#{application}] Build Failure (##{build.revision})"
-      @body    = [ "#{build.author} broke the build!", build.commit_message, build.output ].join("\n\n")
-      @recipients, @from, @sent_on = email_to, email_from, sent_at
+    def failure(build, options, sent_at = Time.now)
+      @subject = "[#{options[:application_name]}] Build broken by #{build.checkout.last_author} (##{build.checkout.current_revision})"
+      @body    = [ build.checkout.last_commit_message, build.output ].join("\n\n")
+
+      @recipients, @from, @sent_on = options[:recipients], options[:sender], sent_at
+    end
+    
+    def broken(build, options, sent_at = Time.now)
+      @subject = "[#{options[:application_name]}] Build still broken (##{build.checkout.current_revision})"
+      @body    = [ 
+        "#{build.checkout.last_author} did not manage to fix the build with this checkin", 
+        build.checkout.last_commit_message, 
+        build.output
+      ].join("\n\n")
+
+      @recipients, @from, @sent_on = options[:recipients], options[:sender], sent_at
+    end
+    
+    def revival(build, options, sent_at = Time.now)
+      @subject = "[#{options[:application_name]}] Build fixed by #{build.checkout.last_author} (##{build.checkout.current_revision})"
+      @body    = [ build.checkout.last_commit_message ].join("\n\n")
+
+      @recipients, @from, @sent_on = options[:recipients], options[:sender], sent_at
     end
   end
 end
