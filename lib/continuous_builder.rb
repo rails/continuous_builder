@@ -1,13 +1,13 @@
 module ContinuousBuilder
   class Build
-    attr_reader :status, :output, :success, :task_name
+    attr_reader :status, :output, :success, :options
  
     def self.run
       Build.new.run
     end
  
-    def initialize(task_name = "")
-      @task_name = task_name
+    def initialize(options = {})
+      @options = options
     end
  
     def run
@@ -24,7 +24,7 @@ module ContinuousBuilder
     end
  
     def commit_message
-      `svn log #{RAILS_ROOT} -rHEAD -v`
+      `#{options[:env_command]} svn log #{RAILS_ROOT} -rHEAD -v`
     end
  
     def author
@@ -43,25 +43,23 @@ module ContinuousBuilder
  
     private
       def update
-        @status = `svn update #{RAILS_ROOT}`
+        @status = `#{options[:env_command]} svn update #{RAILS_ROOT}`
       end
  
       def info
-        @info ||= YAML.load(`svn info #{RAILS_ROOT}`)
+        @info ||= YAML.load(`#{options[:env_command]} svn info #{RAILS_ROOT}`)
       end
  
       def make
-        @output, @success = `cd #{RAILS_ROOT} && RAILS_ENV=test rake #{task_name}`, ($?.exitstatus == 0)
+        @output, @success = `cd #{RAILS_ROOT} && RAILS_ENV=test #{options[:env_command]} rake #{options[:task_name]}`, ($?.exitstatus == 0)
       end
   end
 
   class Notifier < ActionMailer::Base
     def failure(build, application, email_to, email_from, sent_at = Time.now)
-      @subject    = "[#{application}] Build Failure (##{build.revision})"
+      @subject = "[#{application}] Build Failure (##{build.revision})"
+      @body    = [ "#{build.author} broke the build!", build.commit_message, build.output ].join("\n\n")
       @recipients, @from, @sent_on = email_to, email_from, sent_at
-      @body       = ["#{build.author} broke the build!",
-                     build.commit_message,
-                     build.output].join("\n\n")
     end
   end
 end
