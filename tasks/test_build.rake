@@ -1,6 +1,6 @@
 desc "Pull latest revision, run unit and functional tests, send email on errors"
 task :test_latest_revision => :environment do
-  require(File.dirname(__FILE__) + "/../lib/continuos_builder")
+  require(File.dirname(__FILE__) + "/../lib/continuous_builder")
 
   build = ContinuousBuilder::Build.new(ENV['RAKE_TASK']  || '')
  
