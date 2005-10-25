@@ -4,7 +4,7 @@ task :test_latest_revision => :environment do
 
   build = ContinuousBuilder::Build.new(
     :task_name        => ENV['RAKE_TASK'] || '',
-    :env_command      => ENV['BIN_PATH']  || "/usr/local/bin/",
+    :bin_path         => ENV['BIN_PATH']  || "/usr/local/bin/",
     :application_root => RAILS_ROOT
   )
 
