@@ -14,7 +14,7 @@ module ContinuousBuilder
     def run
       previous_status = @status.recall
       
-      run_status = if checkout.has_changes?
+      if checkout.has_changes?
         if status = make
           @status.keep(:succesful)
           previous_status == :failed ? :revived : :succesful
@@ -25,10 +25,6 @@ module ContinuousBuilder
       else
         :unchanged
       end
-      
-      $stderr << "run: #{run_status.inspect}"
-      
-      run_status
     end
  
     private
