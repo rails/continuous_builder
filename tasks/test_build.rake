@@ -8,19 +8,28 @@ task :test_latest_revision => :environment do
     :application_root => RAILS_ROOT
   )
 
-  notice_options = {
+  mail_notice_options = {
     :application_name => ENV['NAME'], 
     :recipients       => ENV['RECIPIENTS'], 
     :sender           => ENV['SENDER'] || "'Continuous Builder' <cb@example.com>" 
   }
+    
+  campfire_notice_options = {
+    :application_name => ENV['NAME'],
+    :campfire_url     => ENV['CAMPFIRE_URL'],
+    :changeset_url    => ENV['CHANGESET_URL']
+  }
 
   case build.run
     when :failed
-      ContinuousBuilder::Notifier.deliver_failure(build, notice_options)
+      ContinuousBuilder::MailNotifier.deliver_failure(build, notice_options) if ENV['RECIPIENTS']
+      ContinuousBuilder::CampfireNotifier.deliver_failure(build, campfire_notice_options) if ENV['CAMPFIRE_URL']
     when :revived
-      ContinuousBuilder::Notifier.deliver_revival(build, notice_options)
+      ContinuousBuilder::MailNotifier.deliver_revival(build, notice_options) if ENV['RECIPIENTS']
+      ContinuousBuilder::CampfireNotifier.deliver_revival(build, campfire_notice_options) if ENV['CAMPFIRE_URL']
     when :broken
-      ContinuousBuilder::Notifier.deliver_broken(build, notice_options)
+      ContinuousBuilder::MailNotifier.deliver_broken(build, notice_options) if ENV['RECIPIENTS']
+      ContinuousBuilder::CampfireNotifier.deliver_broken(build, campfire_notice_options) if ENV['CAMPFIRE_URL']
     when :unchanged, :succesful
       # Smile, be happy, it's all good
   end 
