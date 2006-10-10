@@ -22,13 +22,13 @@ task :test_latest_revision => :environment do
 
   case build.run
     when :failed
-      ContinuousBuilder::MailNotifier.deliver_failure(build, notice_options) if ENV['RECIPIENTS']
+      ContinuousBuilder::MailNotifier.deliver_failure(build, mail_notice_options) if ENV['RECIPIENTS']
       ContinuousBuilder::CampfireNotifier.deliver_failure(build, campfire_notice_options) if ENV['CAMPFIRE_URL']
     when :revived
-      ContinuousBuilder::MailNotifier.deliver_revival(build, notice_options) if ENV['RECIPIENTS']
+      ContinuousBuilder::MailNotifier.deliver_revival(build, mail_notice_options) if ENV['RECIPIENTS']
       ContinuousBuilder::CampfireNotifier.deliver_revival(build, campfire_notice_options) if ENV['CAMPFIRE_URL']
     when :broken
-      ContinuousBuilder::MailNotifier.deliver_broken(build, notice_options) if ENV['RECIPIENTS']
+      ContinuousBuilder::MailNotifier.deliver_broken(build, mail_notice_options) if ENV['RECIPIENTS']
       ContinuousBuilder::CampfireNotifier.deliver_broken(build, campfire_notice_options) if ENV['CAMPFIRE_URL']
     when :unchanged, :succesful
       # Smile, be happy, it's all good
